@@ -4,7 +4,7 @@
 
 import serial
 import time
-from Tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, END, LEFT
+from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, END, LEFT
 from ttk import Frame, Button, Style
 
 ser = serial.Serial(baudrate = 115200, timeout = 0.5)
@@ -17,6 +17,8 @@ class Motor(Frame):
 		Frame.__init__(self, parent)
 		self.parent = parent
 		self.initUI()
+		self.initPort()
+		self.handshake(hs_bit)
 
 	def initUI(self):
 		self.parent.title("Motor Test")
@@ -43,98 +45,99 @@ class Motor(Frame):
 		clearButton.pack(side = LEFT)
 
 	def runTest1(self):
-		lb.insert(END, 'Test 1 Complete')
+		ser.write('1'.encode('utf-8'))
+		lb.insert(END, 'Running test 1...')
+		self.getData()
 
 	def runTest2(self):
-		lb.insert(END, 'Test 2 Complete')
+		ser.write('2'.encode('utf-8'))
+		lb.insert(END, 'Running test 2...')
+		self.getData()
 
 	def clearTxt(self):
 		lb.delete(0, END)
 
-# Find and initalize the port to run
-def initPort():
-	# Initial port values
-	port = 0
-	ser.port = port
-	print("Trying {}...".format(ser.name))
+	# Find and initalize the port to run
+	def initPort(self):
+		# Initial port values
+		port = 0
+		ser.port = port
+		lb.insert(END, "Trying {}...".format(ser.name))
 
-	# Figure out which port to open
-	while port < 9:
-		try: 
-			# In case the port wasn't properly closed before
-			ser.close()
-			# Open port
-			ser.open()
-			print("Opened serial port on {}".format(ser.name))
-			break
-		except serial.SerialException:
-			ser.close()
-			port += 1
-			ser.port = port
-			print("Trying {}...".format(ser.name))
-
-# Complete handshake with the TIVA
-def handshake(n):
-	# Send and wait for handshake before proceeding
-	while True:
-		try:
-			send = n
-			# Wait until there is something I can read
-			while ser.inWaiting() == 0:
-				ser.write(send)
-				# print('Wrote handshake')
-				time.sleep(0.1) # sleep for 100 ms
-				continue
-			line = ser.read(1)
-			print('Received text: {}'.format(line))
-			if (line == send):
-				print('Handshake complete')
+		# Figure out which port to open
+		while port < 9:
+			try: 
+				# In case the port wasn't properly closed before
+				ser.close()
+				# Open port
+				ser.open()
+				lb.insert(END, "Opened serial port on {}".format(ser.name))
 				break
-		except ser.SerialTimeoutException:
-			print('Nothing received...')
-
-# Close open serial port
-def closePort():
-	# Properly close open serial port
-	ser.close()
-	print('Serial {} closed'.format(ser.name))
-
-# Ask user for option to run
-def getChoice():
-	while True:
-		option = str(input('Enter the profile that you want to run: '))
-		if (option == '1' or option == '2' or option == '3' or option == '4'):
-			ser.write(option.encode('utf-8'))
-			break
-
-# Read in and print data
-def getData():
-	index = 0
-	data = []
-	line = ser.read(1)
-
-	# Flush buffer of handshake bits
-	while line == hs_bit:
-		line = ser.read(1)
-
-	# Only iterate 20 times
-	while index < 20:
-		# Check to see if read line is comma or newline
-		if line != b',' and line != b'\n':
-			data.append(line)
-
-		# If line is comma or newline, convert hex data to dec and reset data
-		else:
+			except serial.SerialException:
+				ser.close()
+				port += 1
+				ser.port = port
+				lb.insert(END, "Trying {}...".format(ser.name))
+	# Complete handshake with the TIVA
+	def handshake(self, n):
+		# Send and wait for handshake before proceeding
+		while True:
 			try:
-				# Convert bytes to usable int
-				x = int.from_bytes(data[0] + data[1], byteorder = 'big')
-				print(x, " : ",data[0] + data[1])
-				data = []
-			except ValueError:
-				print(line)
-		# Read next line
+				send = n
+				# Wait until there is something I can read
+				while ser.inWaiting() == 0:
+					ser.write(send)
+					# print('Wrote handshake')
+					time.sleep(0.1) # sleep for 100 ms
+					continue
+				line = ser.read(1)
+				lb.insert(END, 'Received text: {}'.format(line))
+				if (line == send):
+					lb.insert(END, 'Handshake complete')
+					break
+			except ser.SerialTimeoutException:
+				lb.insert(END, 'Nothing received...')
+
+	# Read in and print data
+	def getData(self):
+		index = 0
+		data = []
 		line = ser.read(1)
-		index += 1
+
+		# Flush buffer of handshake bits
+		while line == hs_bit:
+			line = ser.read(1)
+
+		# Only iterate 20 times
+		while index < 20:
+			# Check to see if read line is comma or newline
+			if line != b',' and line != b'\n':
+				data.append(line)
+
+			# If line is comma or newline, convert hex data to dec and reset data
+			else:
+				try:
+					# Convert bytes to usable int
+					x = int.from_bytes(data[0] + data[1], byteorder = 'big')
+					# print(x, " : ",data[0] + data[1])
+					lb.insert(END, x)
+					data = []
+				except ValueError:
+					print(line)
+			# Read next line
+			line = ser.read(1)
+			index += 1
+
+	# Quit out of window
+	def quit(self):
+		self.closePort()
+		root.destroy()
+
+	# Close open serial port
+	def closePort(self):
+		# Properly close open serial port
+		ser.close()
+		lb.insert(END, 'Serial {} closed'.format(ser.name))
 
 # def main():
 # 	initPort()
@@ -143,11 +146,20 @@ def getData():
 # 	getData()
 # 	closePort()
 
+# Close open serial port
+def closePort():
+	# Properly close open serial port
+	ser.close()
+	print('Serial {} closed'.format(ser.name))
+
+
 def main():
 	root = Tk()
 	root.geometry("400x300")
 	app = Motor(root)
 	root.mainloop()
+	closePort()
+
 
 if __name__ == '__main__':
 	main()
