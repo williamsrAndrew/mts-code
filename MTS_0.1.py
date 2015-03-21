@@ -5,7 +5,7 @@
 import serial
 import time
 from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, END, LEFT
-from ttk import Frame, Button, Style
+from tkinter.ttk import Frame, Button, Style
 
 ser = serial.Serial(baudrate = 115200, timeout = 0.5)
 hs_bit = b'p'		# Handshake bit
