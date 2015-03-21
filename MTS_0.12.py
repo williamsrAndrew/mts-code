@@ -1,6 +1,6 @@
 ## Motor Test Stand: Python Code with GUI ##
 ## Andrew Williams, Tim McDonald, Paulo Mavungo, Sam Roark
-## Revised 3/16/2015
+## Revised 3/20/2015
 
 import serial
 import time
@@ -40,6 +40,10 @@ class Motor(Frame):
 		test1Button.pack(side = RIGHT)
 		test2Button = Button(self, text = 'Test 2', command = self.runTest2)
 		test2Button.pack(side = RIGHT)
+		test3Button = Button(self, text = 'Test 3', command = self.runTest3)
+		test3Button.pack(side = RIGHT)
+		test4Button = Button(self, text = 'Test 4', command = self.runTest4)
+		test4Button.pack(side = RIGHT)
 
 		clearButton = Button(self, text = 'Clear', command = self.clearTxt)
 		clearButton.pack(side = LEFT)
@@ -47,12 +51,22 @@ class Motor(Frame):
 	def runTest1(self):
 		ser.write('1'.encode('utf-8'))
 		lb.insert(END, 'Running test 1...')
-		self.getData()
+		self.getData(100)
 
 	def runTest2(self):
 		ser.write('2'.encode('utf-8'))
 		lb.insert(END, 'Running test 2...')
-		self.getData()
+		self.getData(100)
+
+	def runTest3(self):
+		ser.write('3'.encode('utf-8'))
+		lb.insert(END, 'Running test 3...')
+		self.getData(100)
+
+	def runTest4(self):
+		ser.write('4'.encode('utf-8'))
+		lb.insert(END, 'Running test 4...')
+		self.getData(100)
 
 	def clearTxt(self):
 		lb.delete(0, END)
@@ -78,6 +92,7 @@ class Motor(Frame):
 				port += 1
 				ser.port = port
 				lb.insert(END, "Trying {}...".format(ser.name))
+
 	# Complete handshake with the TIVA
 	def handshake(self, n):
 		# Send and wait for handshake before proceeding
@@ -99,17 +114,17 @@ class Motor(Frame):
 				lb.insert(END, 'Nothing received...')
 
 	# Read in and print data
-	def getData(self):
+	def getData(self, cycles):
 		index = 0
-		buf = [] # use as buffer
-		line = ser.read(1)
+		buf = bytearray() # use as buffer
+		line = ser.read()
 
 		# Flush buffer of handshake bits
 		while line == hs_bit:
-			line = ser.read(1)
+			line = ser.read()
 
 		# Only iterate 20 times
-		while index < 20:
+		while index < cycles:
 			# Check to see if read line is comma or newline
 			if line != b',' and line != b'\n':
 				buf.append(line)
@@ -118,10 +133,15 @@ class Motor(Frame):
 			elif line == b',':
 				try:
 					# Convert bytes to usable int
-					x = int.from_bytes(buf[0] + buf[1], byteorder = 'big')
-					# print(x, " : ",data[0] + data[1])
-					lb.insert(END, x)
-					buf = [] # Clear buffer
+					data = int.from_bytes(buf, byteorder = 'big')
+
+					'''
+					Debug Statement
+					'''
+					lb.insert(END, data)
+
+					buf = bytearray() # Clear buffer
+
 				except ValueError:
 					print(line)
 			# Read next line
@@ -131,6 +151,7 @@ class Motor(Frame):
 	# Quit out of window
 	def quit(self):
 		self.closePort()
+		time.sleep(1)
 		root.destroy()
 
 	# Close open serial port
