@@ -98,6 +98,9 @@ class Motor(Frame):
 			self.updateView()
 
 	def runTest4(self):
+		# Timer
+		curTime = time.time()
+
 		if ser.name == None:
 			lb.insert(END, 'Open comunication on a port to run a test')
 			self.updateView()
@@ -106,7 +109,8 @@ class Motor(Frame):
 			ser.write('4'.encode('utf-8'))
 			lb.insert(END, 'Running test 4...')
 			self.updateView()
-			self.getData(100)
+			bits_read = self.getData(1000)
+			print("Time: {}\nBits read: {}\nBits per second: {}".format(time.time() - curTime, bits_read, bits_read /(time.time() - curTime) ))
 		except serial.serialutil.SerialException:
 			lb.insert(END, 'Could not run test 4')
 			self.updateView()
@@ -172,13 +176,16 @@ class Motor(Frame):
 	# Read in and print data
 	def getData(self, cycles):
 		index = 0
+		total_bits = 0
 		buf = [] # use as buffer
 		listLine = ''
 		bit = ser.read()
+		total_bits += 1
 
 		# Flush buffer of handshake bits
 		while bit == hs_bit:
 			bit = ser.read()
+			total_bits += 1
 
 		# Only iterate 20 times
 		while index < cycles:
@@ -224,7 +231,9 @@ class Motor(Frame):
 
 			# Read next bit
 			bit = ser.read()
+			total_bits += 1
 			index += 1
+		return total_bits
 
 
 	# Update the listbox 
