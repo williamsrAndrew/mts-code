@@ -3,7 +3,6 @@
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "inc/hw_ints.h"
-#include "inc/hw_i2c.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
 #include "driverlib/pin_map.h"
@@ -26,16 +25,6 @@
 // largest 32-bit int
 #define MAX_32_TIMER_SIZE 4294967295
 
-// I2C MUX values (1st Byte of Config)
-#define I2C_ADDR 0x48
-#define I2C_CURR 0x46
-#define I2C_VOLT 0x56
-#define I2C_TOR 0x66
-#define I2C_THU 0x76
-
-// I2C 2nd Byte of Config
-#define I2C_CONFIG 0xC3
-
 // Global variable declaration
 uint8_t bytes_4[4];					// 4 byte buffer for 32bit ints
 uint8_t bytes_2[2];					// 2 byte buffer for 16bit ints (12-bit ADC)
@@ -44,49 +33,13 @@ volatile uint32_t freqRPM;			// Used to store and calculate current freq/RPM val
 volatile uint8_t nextSection;		// boolean that tells test program to go to next section
 volatile uint8_t nextDataBundle;	// boolean that tells test program to gather/send next data bundle
 
-
 uint16_t ReadI2CADC(uint8_t selectByte){
 	uint16_t currRead;
-	uint8_t dataIn[2];
-
-	// Address byte of the ADS1015
-	I2CMasterSlaveAddrSet(I2C0_BASE, I2C_ADDR, false);
-	// Points to the Config Register
-	I2CMasterDataPut(I2C0_BASE, 1);
-	I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-	while(I2CMasterBusy(I2C0_BASE)){}
-	// Read Write two bytes to the Config Register
-	I2CMasterDataPut(I2C0_BASE, selectByte);
-	I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
-	while(I2CMasterBusy(I2C0_BASE)){}
-	I2CMasterDataPut(I2C0_BASE, I2C_CONFIG);
-	I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-	while(I2CMasterBusy(I2C0_BASE)){}
-
-	// Point to Conversion Register
-	I2CMasterSlaveAddrSet(I2C0_BASE, I2C_ADDR, false);
-	// Points to the Conversion Register
-	I2CMasterDataPut(I2C0_BASE, 0);
-	I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-	while(I2CMasterBusy(I2C0_BASE)){}
-
-	I2CMasterSlaveAddrSet(I2C0_BASE, I2C_ADDR, true);
-	// Read 1st byte
-	I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-	while(I2CMasterBusy(I2C0_BASE)){}
-	dataIn[0] = I2CMasterDataGet(I2C0_BASE);
-	// Read 2nd byte
-	I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-	while(I2CMasterBusy(I2C0_BASE)){}
-	dataIn[1] = I2CMasterDataGet(I2C0_BASE);
-
-	currRead = 69;
-
+	currRead = 2048;
 	return currRead;
 }
 
 void TestProgram1(void){	// Proof of concept
-	uint16_t data;
 
 	//	Clear UART FIFO
 	while(UARTCharsAvail(UART0_BASE)){
@@ -112,47 +65,6 @@ void TestProgram1(void){	// Proof of concept
 		}
 
 	//--------Test Begin--------
-	while(1){
-		data = ReadI2CADC(I2C_CURR);
-		SysCtlDelay(SysCtlClockGet()/300);
-	}
-
-}
-
-void TestProgram2(void){	// Premade programs: Square, Ramp, Sinusoid
-
-}
-
-void TestProgram3(void){	// User chooses start time, run time, and end time
-
-}
-
-void DebugProgram(void){
-	int i;
-	uint32_t timeMilli = 0;
-
-	// 	Set timer to 5 seconds
-	timerLoad = (SysCtlClockGet() * 5) - 1;
-	TimerLoadSet(TIMER0_BASE, TIMER_A, timerLoad);
-	timerLoad = (SysCtlClockGet()/100) - 1;
-	TimerLoadSet(TIMER1_BASE, TIMER_A, timerLoad);
-	TimerLoadSet(TIMER2_BASE, TIMER_A, MAX_32_TIMER_SIZE);
-
-	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_1);
-
-    ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, DUTY_CYCLE_5_PER);
-    //	Enable PWM Signal
-	ROM_PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, true);
-	ROM_PWMGenEnable(PWM1_BASE, PWM_GEN_0);
-
-	//	Enable timers
-	TimerEnable(TIMER0_BASE, TIMER_A);
-	TimerEnable(TIMER2_BASE, TIMER_A);
-    // Enable GPIO interrupts on Port E pin 3
-    IntEnable(INT_GPIOE);
-    GPIOIntEnable(GPIO_PORTE_BASE, GPIO_INT_PIN_3);
-
-	//--------Test Begin--------
 
 	/*	~~~~~ Section # 1 ~~~~~
 	 *
@@ -160,56 +72,24 @@ void DebugProgram(void){
 	 *
 	 */
 
-	while(!nextSection){
-			TimerEnable(TIMER1_BASE, TIMER_A);
+    // Set pulse width for 5% duty cycle ~1msec
+    ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, DUTY_CYCLE_5_PER);
 
-			// Time in milliseconds
-			bytes_4[0] = (timeMilli >> 24) & 0xFFFF;
-			bytes_4[1] = (timeMilli >> 16) & 0xFFFF;
-			bytes_4[2] = (timeMilli >> 8) & 0xFFFF;
-			bytes_4[3] = timeMilli & 0xFFFF;
-			for(i=0;i<4;i++){
-			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
-			}
-			// Input speed
-			UARTCharPutNonBlocking(UART0_BASE,100);
-			// Frequency
-			bytes_4[0] = (freqRPM >> 24) & 0xFFFF;
-			bytes_4[1] = (freqRPM >> 16) & 0xFFFF;
-			bytes_4[2] = (freqRPM >> 8) & 0xFFFF;
-			bytes_4[3] = freqRPM & 0xFFFF;
-			for(i=0;i<4;i++){
-			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
-			}
-			// data
-			bytes_2[0] = (6969 >> 8) & 0xFF;
-			bytes_2[1] = 6969 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (1000 >> 8) & 0xFF;
-			bytes_2[1] = 1000 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (9999 >> 8) & 0xFF;
-			bytes_2[1] = 9999 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (1234 >> 8) & 0xFF;
-			bytes_2[1] = 1234 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-	    	while(!nextDataBundle){
-	    	}
-	    	nextDataBundle = false;
-	    	timeMilli+=10;
-		}
+    //	Enable PWM Signal
+	ROM_PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, true);
+	ROM_PWMGenEnable(PWM1_BASE, PWM_GEN_0);
+
+	// 	Set timer to 5 seconds
+	timerLoad = (SysCtlClockGet() * 5) - 1;
+	TimerLoadSet(TIMER0_BASE, TIMER_A, timerLoad);
+
+	//	Enable timer
+	TimerEnable(TIMER0_BASE, TIMER_A);
+
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_1);
+
+	while(!nextSection){
+	}
 
 	/*	~~~~~ Section # 2 ~~~~~
 	 *
@@ -218,10 +98,10 @@ void DebugProgram(void){
 	 */
 
 	//	Set PWM Signal to 2 ms (100% speed)
-	ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, 4500);
+	ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, DUTY_CYCLE_10_PER);
 
 	// 	Set timer to 15 seconds
-	timerLoad = (SysCtlClockGet() * 1) - 1;
+	timerLoad = (SysCtlClockGet() * 15) - 1;
 	TimerLoadSet(TIMER0_BASE, TIMER_A, timerLoad);
 	TimerEnable(TIMER0_BASE, TIMER_A);
 
@@ -231,55 +111,7 @@ void DebugProgram(void){
 	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_2);
 
 	while(!nextSection){
-			TimerEnable(TIMER1_BASE, TIMER_A);
-
-			// Time in milliseconds
-			bytes_4[0] = (timeMilli >> 24) & 0xFFFF;
-			bytes_4[1] = (timeMilli >> 16) & 0xFFFF;
-			bytes_4[2] = (timeMilli >> 8) & 0xFFFF;
-			bytes_4[3] = timeMilli & 0xFFFF;
-			for(i=0;i<4;i++){
-			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
-			}
-			// Input speed
-			UARTCharPutNonBlocking(UART0_BASE,100);
-			// Frequency
-			bytes_4[0] = (freqRPM >> 24) & 0xFFFF;
-			bytes_4[1] = (freqRPM >> 16) & 0xFFFF;
-			bytes_4[2] = (freqRPM >> 8) & 0xFFFF;
-			bytes_4[3] = freqRPM & 0xFFFF;
-			for(i=0;i<4;i++){
-			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
-			}
-			// data
-			bytes_2[0] = (6969 >> 8) & 0xFF;
-			bytes_2[1] = 6969 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (1000 >> 8) & 0xFF;
-			bytes_2[1] = 1000 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (9999 >> 8) & 0xFF;
-			bytes_2[1] = 9999 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (1234 >> 8) & 0xFF;
-			bytes_2[1] = 1234 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-	    	while(!nextDataBundle){
-	    	}
-	    	nextDataBundle = false;
-	    	timeMilli+=10;
-		}
+	}
 
 	/*	~~~~~ Section # 3 ~~~~~
 	 *
@@ -290,8 +122,8 @@ void DebugProgram(void){
 	//	Set PWM Signal back to 1 ms (0% speed)
 	ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, DUTY_CYCLE_5_PER);
 
-	// 	Set timer to 5 seconds
-	timerLoad = (SysCtlClockGet() * 1) - 1;
+	// 	Set timer to 10 seconds
+	timerLoad = (SysCtlClockGet() * 10) - 1;
 	TimerLoadSet(TIMER0_BASE, TIMER_A, timerLoad);
 	TimerEnable(TIMER0_BASE, TIMER_A);
 
@@ -301,55 +133,7 @@ void DebugProgram(void){
 	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_3);
 
 	while(!nextSection){
-			TimerEnable(TIMER1_BASE, TIMER_A);
-
-			// Time in milliseconds
-			bytes_4[0] = (timeMilli >> 24) & 0xFFFF;
-			bytes_4[1] = (timeMilli >> 16) & 0xFFFF;
-			bytes_4[2] = (timeMilli >> 8) & 0xFFFF;
-			bytes_4[3] = timeMilli & 0xFFFF;
-			for(i=0;i<4;i++){
-			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
-			}
-			// Input speed
-			UARTCharPutNonBlocking(UART0_BASE,100);
-			// Frequency
-			bytes_4[0] = (freqRPM >> 24) & 0xFFFF;
-			bytes_4[1] = (freqRPM >> 16) & 0xFFFF;
-			bytes_4[2] = (freqRPM >> 8) & 0xFFFF;
-			bytes_4[3] = freqRPM & 0xFFFF;
-			for(i=0;i<4;i++){
-			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
-			}
-			// data
-			bytes_2[0] = (6969 >> 8) & 0xFF;
-			bytes_2[1] = 6969 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (1000 >> 8) & 0xFF;
-			bytes_2[1] = 1000 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (9999 >> 8) & 0xFF;
-			bytes_2[1] = 9999 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-			// data
-			bytes_2[0] = (1234 >> 8) & 0xFF;
-			bytes_2[1] = 1234 & 0xFF;
-			for(i=0;i<2;i++){
-				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
-			}
-	    	while(!nextDataBundle){
-	    	}
-	    	nextDataBundle = false;
-	    	timeMilli+=10;
-		}
+	}
 
 	nextSection = false;
 
@@ -363,17 +147,93 @@ void DebugProgram(void){
 	ROM_PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, false);
 	ROM_PWMGenDisable(PWM1_BASE, PWM_GEN_0);
 
+	//TimerIntDisable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+	//IntDisable(INT_TIMER0A);	// disables a specific interrupt associated with TIMER0A
+}
 
-	// Signal end of test
-	for(i=0;i<4;i++){
-		UARTCharPutNonBlocking(UART0_BASE,'~');
+void TestProgram2(void){	// Premade programs: Square, Ramp, Sinusoid
+
+}
+
+void TestProgram3(void){	// User chooses start time, run time, and end time
+
+}
+
+void DebugProgram(void){
+	int i;
+	uint32_t timeMilli = 1;
+
+	// 	Set timer to 5 seconds
+	timerLoad = (SysCtlClockGet() * 5) - 1;
+	TimerLoadSet(TIMER0_BASE, TIMER_A, timerLoad);
+	timerLoad = (SysCtlClockGet()/100) - 1;
+	TimerLoadSet(TIMER1_BASE, TIMER_A, timerLoad);
+	TimerLoadSet(TIMER2_BASE, TIMER_A, MAX_32_TIMER_SIZE);
+
+	//	Enable timers
+	TimerEnable(TIMER0_BASE, TIMER_A);
+	TimerEnable(TIMER2_BASE, TIMER_A);
+    // Enable GPIO interrupts on Port E pin 3
+    IntEnable(INT_GPIOE);
+    GPIOIntEnable(GPIO_PORTE_BASE, GPIO_INT_PIN_3);
+
+	while(!nextSection){
+		TimerEnable(TIMER1_BASE, TIMER_A);
+
+		// Time in milliseconds
+		bytes_4[0] = (timeMilli >> 24) & 0xFFFF;
+		bytes_4[1] = (timeMilli >> 16) & 0xFFFF;
+		bytes_4[2] = (timeMilli >> 8) & 0xFFFF;
+		bytes_4[3] = timeMilli & 0xFFFF;
+		for(i=0;i<4;i++){
+		    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
+		}
+
+		// Comma Delimiter
+		UARTCharPutNonBlocking(UART0_BASE,',');
+
+		// Frequency
+		bytes_4[0] = (freqRPM >> 24) & 0xFFFF;
+		bytes_4[1] = (freqRPM >> 16) & 0xFFFF;
+		bytes_4[2] = (freqRPM >> 8) & 0xFFFF;
+		bytes_4[3] = freqRPM & 0xFFFF;
+		for(i=0;i<4;i++){
+		    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
+		}
+
+		// Comma Delimiter
+		UARTCharPutNonBlocking(UART0_BASE,',');
+
+		// data
+		bytes_2[0] = (ReadI2CADC(8) >> 8) & 0xFF;
+		bytes_2[1] = ReadI2CADC(8) & 0xFF;
+		for(i=0;i<2;i++){
+			UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
+		}
+
+		// Comma Delimiter
+		UARTCharPutNonBlocking(UART0_BASE,',');
+
+		// data
+		bytes_2[0] = (1000 >> 8) & 0xFF;
+		bytes_2[1] = 1000 & 0xFF;
+		for(i=0;i<2;i++){
+			UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
+		}
+		// new line character
+		UARTCharPutNonBlocking(UART0_BASE,'\n');
+		// Wait for /100 of a second to finish
+    	while(!nextDataBundle){
+    	}
+    	nextDataBundle = false;
+    	timeMilli++;
 	}
+	// Signal end of test
+	UARTCharPutNonBlocking(UART0_BASE,'!');
 	freqRPM = 0;
 	nextSection = false;
 	IntDisable(INT_GPIOE);
 	GPIOIntDisable(GPIO_PORTE_BASE, GPIO_INT_PIN_3);
-	ROM_PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, false);
-	ROM_PWMGenDisable(PWM1_BASE, PWM_GEN_0);
 }
 
 void Timer0IntHandler(void){
@@ -392,13 +252,19 @@ void RisEdgeIntHandler(void){
 	// Clear the Rising Edge interrupt
 	GPIOIntClear(GPIO_PORTE_BASE, GPIO_INT_PIN_3);
 	freqRPM = TimerValueGet(TIMER2_BASE, TIMER_A);
+	TimerDisable(TIMER2_BASE, TIMER_A);
 	TimerLoadSet(TIMER2_BASE, TIMER_A, MAX_32_TIMER_SIZE);
+	TimerEnable(TIMER2_BASE, TIMER_A);
 	if(freqRPM == 0){
 		freqRPM = 1;
 	}
-	freqRPM = MAX_32_TIMER_SIZE - freqRPM;
 	freqRPM = SysCtlClockGet()/freqRPM;
 	freqRPM = (10*freqRPM);		// rpm = (120*freq)/poles   ... p = 12 for now
+
+	// Flash light
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_2);
+	SysCtlDelay(SysCtlClockGet() / (2000 * 3));		// ~ .5msec
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, 0);
 }
 
 void Config(void){
@@ -424,13 +290,6 @@ void Config(void){
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);	// where PWM is
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);	// used in RPM interrupt detection
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);	// where LED's are
-
-    ROM_GPIOPinConfigure(GPIO_PB2_I2C0SCL);
-    ROM_GPIOPinConfigure(GPIO_PB3_I2C0SDA);
-    ROM_GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);
-    ROM_GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);
-    ROM_I2CMasterEnable(I2C0_BASE);
-    ROM_I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(),false);
 
     // Configure Port F pins to blink blue, green, and red light
     ROM_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
@@ -460,7 +319,7 @@ void Config(void){
 	// Configure Timer which will be used to time data transmission
 	ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_ONE_SHOT);
 	// Configure Timer which will be used to record RPM information
-	ROM_TimerConfigure(TIMER2_BASE, TIMER_CFG_ONE_SHOT);
+	ROM_TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC_UP);
 
 	// Configure Timer Interrupts
 	//	Timer handling test sections (start, mid, end)
