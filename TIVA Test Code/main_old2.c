@@ -28,10 +28,10 @@
 
 // I2C MUX values (1st Byte of Config)
 #define I2C_ADDR 0x48
-#define I2C_CURR 0x42
-#define I2C_VOLT 0x52
-#define I2C_TOR 0x62
-#define I2C_THU 0x72
+#define I2C_CURR 0x46
+#define I2C_VOLT 0x56
+#define I2C_TOR 0x66
+#define I2C_THU 0x76
 
 // I2C 2nd Byte of Config
 #define I2C_CONFIG 0xC3
@@ -47,9 +47,7 @@ volatile uint8_t nextDataBundle;	// boolean that tells test program to gather/se
 
 uint16_t ReadI2CADC(uint8_t selectByte){
 	uint16_t currRead;
-	uint16_t temp;
 	uint8_t dataIn[2];
-	uint8_t i;
 
 	// Address byte of the ADS1015
 	I2CMasterSlaveAddrSet(I2C0_BASE, I2C_ADDR, false);
@@ -82,11 +80,7 @@ uint16_t ReadI2CADC(uint8_t selectByte){
 	while(I2CMasterBusy(I2C0_BASE)){}
 	dataIn[1] = I2CMasterDataGet(I2C0_BASE);
 
-	currRead = (uint16_t)dataIn[0];
-	currRead = currRead << 4;
-	temp = (uint16_t)dataIn[1];
-	temp = temp >> 4;
-	currRead = currRead + temp;
+	currRead = 69;
 
 	return currRead;
 }
@@ -136,7 +130,6 @@ void TestProgram3(void){	// User chooses start time, run time, and end time
 void DebugProgram(void){
 	int i;
 	uint32_t timeMilli = 0;
-	uint16_t I2Cdata;
 
 	// 	Set timer to 5 seconds
 	timerLoad = (SysCtlClockGet() * 5) - 1;
@@ -189,30 +182,26 @@ void DebugProgram(void){
 			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_VOLT);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (6969 >> 8) & 0xFF;
+			bytes_2[1] = 6969 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_CURR);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (1000 >> 8) & 0xFF;
+			bytes_2[1] = 1000 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_THU);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (9999 >> 8) & 0xFF;
+			bytes_2[1] = 9999 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_TOR);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (1234 >> 8) & 0xFF;
+			bytes_2[1] = 1234 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
@@ -263,30 +252,26 @@ void DebugProgram(void){
 			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_VOLT);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (6969 >> 8) & 0xFF;
+			bytes_2[1] = 6969 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_CURR);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (1000 >> 8) & 0xFF;
+			bytes_2[1] = 1000 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_THU);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (9999 >> 8) & 0xFF;
+			bytes_2[1] = 9999 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_TOR);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (1234 >> 8) & 0xFF;
+			bytes_2[1] = 1234 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
@@ -306,7 +291,7 @@ void DebugProgram(void){
 	ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, DUTY_CYCLE_5_PER);
 
 	// 	Set timer to 5 seconds
-	timerLoad = (SysCtlClockGet() * 5) - 1;
+	timerLoad = (SysCtlClockGet() * 1) - 1;
 	TimerLoadSet(TIMER0_BASE, TIMER_A, timerLoad);
 	TimerEnable(TIMER0_BASE, TIMER_A);
 
@@ -337,30 +322,26 @@ void DebugProgram(void){
 			    UARTCharPutNonBlocking(UART0_BASE,bytes_4[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_VOLT);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (6969 >> 8) & 0xFF;
+			bytes_2[1] = 6969 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_CURR);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (1000 >> 8) & 0xFF;
+			bytes_2[1] = 1000 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_THU);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (9999 >> 8) & 0xFF;
+			bytes_2[1] = 9999 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
 			// data
-			I2Cdata = ReadI2CADC(I2C_TOR);
-			bytes_2[0] = (I2Cdata >> 8) & 0xFF;
-			bytes_2[1] = I2Cdata & 0xFF;
+			bytes_2[0] = (1234 >> 8) & 0xFF;
+			bytes_2[1] = 1234 & 0xFF;
 			for(i=0;i<2;i++){
 				UARTCharPutNonBlocking(UART0_BASE,bytes_2[i]);
 			}
