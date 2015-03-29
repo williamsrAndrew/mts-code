@@ -21,15 +21,10 @@ class Motor(Frame):
 		Frame.__init__(self, parent)
 		self.parent = parent
 		self.initUI()
-		# self.initPort()
-		# self.handshake(hs_byte)
 
 	def initUI(self):
 		self.parent.title("Motor Test")
 		self.style = Style()
-
-		# frame = Frame(self, relief = RAISED, borderwidth = 2)
-		# frame.pack(fill = BOTH, expand = 1)
 
 		# Listbox that other functions can access
 		global lb
@@ -38,6 +33,7 @@ class Motor(Frame):
 
 		self.pack(fill = BOTH, expand = 1)
 
+		# Buttons
 		closeButton = Button(self, text = 'Close', command = self.quit)
 		closeButton.pack(side = RIGHT, padx = 5, pady = 5)
 		test1Button = Button(self, text = 'Test 1', command = self.runTest1)
@@ -53,15 +49,15 @@ class Motor(Frame):
 		clearButton.pack(side = LEFT)
 		initButton = Button(self, text = 'Init Port', command = self.initPort)
 		initButton.pack(side = LEFT)
-		# hsButton = Button(self, text = 'Handshake', command = self.handshake)
-		# hsButton.pack(side = LEFT)
 
 	def runTest1(self):
+		# Check if comms has been initialized
 		if ser.name == None:
 			lb.insert(END, 'Open comunication on a port to run a test')
 			self.updateView()
 			return
 		try:
+			# Write a 1 to run test 1
 			ser.write('1'.encode('utf-8'))
 			lb.insert(END, 'Running test 1...')
 			self.updateView()
@@ -117,8 +113,10 @@ class Motor(Frame):
 			lb.insert(END, 'Could not run test 4')
 			self.updateView()
 
+	# Clear the text from the listbox
 	def clearTxt(self):
 		lb.delete(0, END)
+		return
 
 	# Find and initalize the port to run
 	def initPort(self):
@@ -198,11 +196,11 @@ class Motor(Frame):
 		filetime = time.localtime()
 		f = open('Test Results\\test_{}_{}_{}_{}{}{}.csv'.format(filetime[1], filetime[2], filetime[0], filetime[3], filetime[4], filetime[5]), 'w')
 
+		# Write the title line to the file so we know where each data set is
 		line1 = 'Time, Input, RPM, Voltage, Current, Thrust, Torque\n'
 		lb.insert(END, line1)
 		self.updateView()
 		f.write(line1)
-
 
 		total_bytes = 0
 		buf = [] # use as buffer
@@ -274,60 +272,13 @@ class Motor(Frame):
 			byte = ser.read()
 			# print(byte)
 			total_bytes += 1
-
-
-			# # Check to see if read byte is comma or newline
-			# if byte != b',' and byte != b'\n' and byte != b'!':
-			# 	buf.append(byte)
-
-			# # If byte is comma or newline, convert hex data to dec and reset data
-			# elif byte == b',':
-			# 	try:
-			# 		# Convert bytes to usable int
-			# 		data = int.from_bytes(b''.join(buf), byteorder = 'big')
-
-			# 		'''
-			# 		Debug Statement
-			# 		'''
-			# 		listLine += str(data)
-			# 		listLine += ', '
-			# 		# lb.insert(END, data)
-			# 		# self.updateView()
-
-			# 		buf = [] # Clear buffer
-
-			# 	except ValueError:
-			# 		print(byte)
-
-			# # If byte is newline, do the same as comma except go to next line in file
-			# elif byte == b'\n':
-			# 	try:
-			# 		# Convert bytes to usable int
-			# 		data = int.from_bytes(b''.join(buf), byteorder = 'big')
-
-			# 		'''
-			# 		Debug Statement
-			# 		'''
-			# 		listLine += str(data)
-			# 		lb.insert(END, listLine)
-			# 		self.updateView()
-
-			# 		listLine = '' # Clear listLine
-			# 		buf = [] # Clear buffer
-			# 	except ValueError:
-			# 		print(byte)
-
-			# elif byte == b'!':
-			# 	break
-
-
-			# # Read next byte
-			# byte = ser.read()
-			# print(byte)
-			# total_bytes += 1
 		f.close()
 		return total_bytes
 
+	def voltageValue(self, value):
+		# Each +1 bit = +0.002 V
+		# Offset of -0.0036
+		return ((0.002 * value) - 0.0036)
 
 	# Update the listbox 
 	def updateView(self):
