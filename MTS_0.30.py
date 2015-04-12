@@ -133,7 +133,7 @@ class Motor(Frame):
 		self.updateView()
 
 		# Figure out which port to open
-		while port < 10:
+		while port < 50:
 			try: 
 				# In case the port wasn't properly closed before
 				ser.close()
@@ -143,7 +143,7 @@ class Motor(Frame):
 				self.updateView()
 				break
 			except serial.serialutil.SerialException:
-				if port == 9:
+				if port == 49:
 					lb.insert(END, "Could not open a port, try again")
 					self.updateView()
 					ser.port = None
