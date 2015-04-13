@@ -178,7 +178,7 @@ class Motor(Frame):
 		self.updateView()
 
 		# Figure out which port to open
-		while port < 15:
+		while port < 21:
 			try: 
 				# In case the port wasn't properly closed before
 				ser.close()
@@ -188,7 +188,7 @@ class Motor(Frame):
 				self.updateView()
 				break
 			except serial.serialutil.SerialException:
-				if port == 14:
+				if port == 20:
 					lb.insert(END, "Could not open a port, try again")
 					self.updateView()
 					ser.port = None
@@ -308,7 +308,7 @@ class Motor(Frame):
 			byte = ser.read()
 		# Reset end_run and test button
 		end_run = False
-		testButton.config(text = 'Run Test', command = getData)
+		testButton.config(text = 'Run Test', command = runTest)
 		return dataset
 
 	# Create file from the collected data
