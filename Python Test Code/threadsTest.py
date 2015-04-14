@@ -1,22 +1,66 @@
-#!/usr/bin/python
-
-import threading
+# import threading
+import multiprocessing as mp
+import matplotlib.pyplot as plt
+import numpy as np
 import time
 
-# Define a function for the thread
-def print_time( threadName, delay):
-   count = 0
-   while count < 5:
-      time.sleep(delay)
-      count += 1
-      print ("{}:{}".format(threadName, time.ctime(time.time()) ))
+global dataset
+global end_run
+dataset = []
+end_run = False
+thread_sleep = 0.1
 
-# Create two threads as follows
-try:
-   thread.start_new_thread( print_time, ("Thread-1", 2, ) )
-   thread.start_new_thread( print_time, ("Thread-2", 4, ) )
-except:
-   print ("Error: unable to start thread")
+def drawData():
+		plt.xlabel('Time (s)')
+		plt.ylabel('Data')
+		plt.ion()
+		plt.show()
+		t, data = [], []
+		dataSet = []
+		didGet = False
+		while True:
+			while not dataQ.empty():
+				dataSet = dataQ.get()
+				if dataSet == False:
+					break
+				t.append(dataSet[0])
+				data.append(dataSet[1])
+				didGet = True
+			if didGet:
+				plt.plot(t, data, 'b:')
+				plt.draw()
+				didGet = False
+			time.sleep(thread_sleep)
+			if dataSet == False:
+				break
+		plt.show(block = True)
+		return
 
-while 1:
-   pass
+cur_time = time.time()
+dataset.append([])
+dataset.append([])
+# dataset.append([])
+index = 0
+dataQ = mp.Queue()
+draw_job = mp.Process(target = drawData, args = ())
+draw_job.start()
+
+while time.time() - cur_time < 10:
+	dataQ.put([time.time() - cur_time, index])
+	index += 1
+	time.sleep(0.0001)
+
+dataQ.put(False)
+# print (dataset)
+draw_job.join()
+
+
+
+
+
+
+
+
+
+
+

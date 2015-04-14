@@ -9,6 +9,7 @@ import tkinter
 from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, END, LEFT, TOP, BOTTOM, X, StringVar, OptionMenu, Scale, HORIZONTAL, Label, PhotoImage
 from tkinter.ttk import Frame, Button, Style
 import numpy as np
+import matplotlib.pyplot as plt
 import threading
 
 ####### Init variables #######
@@ -17,7 +18,8 @@ hs_byte = b'p'		# Handshake byte
 termination_byte = b'~'
 inits = 0
 end_run = False
-
+dataset = []
+thread_sleep = 1
 
 
 class Motor(Frame):
@@ -103,7 +105,7 @@ class Motor(Frame):
 
 			# Timer
 			curTime = time.time()
-			dataset = self.getData()
+			self.getData()
 			self.updateView()
 
 			# Create the file
@@ -241,7 +243,11 @@ class Motor(Frame):
 	# Read in and print data
 	def getData(self):
 
-		# testButton.config(text = 'Stop Test', command = stopRun)
+		# Make a graph of incoming data in another thread
+		t = threading.Thread(target = self.drawData)
+		t.start()
+		##################################################
+
 		buf = [] # use as buffer
 		byte = ser.read() # Read in first byte
 		ender = 0
@@ -295,9 +301,8 @@ class Motor(Frame):
 					datasetNum = 0
 					loops += 1
 
-					# Print something every so many cycles
 					if loops % 1000 == 0:
-						lb.insert(END, 'Running, {} cycles have completed'.format(loops))
+						lb.insert(END, 'Program running, {} cycles have completed...'.format(loops))
 						self.updateView()
 
 					# If end_run is true, end the run
@@ -314,10 +319,8 @@ class Motor(Frame):
 
 			# Read next byte
 			byte = ser.read()
-			
 		# Reset end_run and test button
-		end_run = False
-		# testButton.config(text = 'Run Test', command = runTest)
+		end_run = True
 		return dataset
 
 	# Create file from the collected data
@@ -348,9 +351,21 @@ class Motor(Frame):
 		return
 
 
-	# Stop running the getData program
-	def stopRun(self):
-		end_run = True
+	def drawData(self):
+		plt.xlabel('Time (s)')
+		plt.ylabel('Voltage, Current, Thrust, Torque')
+		plt.show()
+		while not end_run:
+			t = dataset[0]
+			v = dataset[3]
+			c = dataset[4]
+			thr = dataset[5]
+			tor = dataset[6]
+			plt.plot(t, v, 'r--', t, c, 'bs', t, thr, 'g^', t, tor, 'y:')
+			plt.draw()
+			time.sleep(thread_sleep)
+
+		end_run = False
 		return
 
 	# Convert incoming voltage to actual voltage
@@ -403,6 +418,7 @@ def closePort():
 			ser.flush()
 			ser.close()
 			lb.insert(END, 'Serial {} closed'.format(ser.name))
+
 
 def main():
 	root = Tk()
