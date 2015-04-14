@@ -215,23 +215,26 @@ class Motor(Frame):
 		# total_bytes += 1 # Debug
 		ender = 0
 		index = 0
+		loops = 0
 
 		# Create list for data
 		dataset = []
 		for i in range(0,7):
-			data.append([])
+			dataset.append([])
 		datasetNum = 0
 
 		# Flush buffer of handshake bytes
 		while byte == hs_byte:
 			byte = ser.read()
-			total_bytes += 1 # Debug
+			# total_bytes += 1 # Debug
 
 		while True:
 			# Check if byte is an ender byte
 			if byte == termination_byte:
 				ender += 1
 				if ender == 4:
+					lb.insert(END, 'Complete, now creating file...')
+					self.updateView()
 					break
 			else: ender = 0
 
@@ -261,6 +264,9 @@ class Motor(Frame):
 					# Convert bytes to usable int
 					data = int.from_bytes(b''.join(buf), byteorder = 'big')
 					dataset[datasetNum].append(data)
+					if loops % 100 == 0:
+						lb.insert(END, 'working: elapsed time # {}'.format(loops/100))
+						self.updateView()
 
 					# '''
 					# Debug Statement
@@ -276,6 +282,7 @@ class Motor(Frame):
 
 					index = 0
 					datasetNum = 0
+					loops += 1
 
 				except ValueError:
 					print(byte)
@@ -301,23 +308,22 @@ class Motor(Frame):
 		f = open('Test Results\\test_{}_{}_{}_{}{}{}.csv'.format(filetime[1], filetime[2], filetime[0], filetime[3], filetime[4], filetime[5]), 'w')
 
 		# Write the title line to the file so we know where each data set is
-		f.write('Time, Input, RPM, Voltage, Current, Thrust, Torque\n')
+		f.write('Time, Input, RPM, Thrust, Torque, Voltage, Current\n')
 
 		# Append data to file
 		dataLine =''
-		for i in range(0, len(data[0])):
+		for i in range(0, len(dataset[0])):
 			# Append values to dataLine
 			dataLine += str(dataset[0][i]) + ','	# Time - absolute
 			dataLine += str(dataset[1][i]) + ','	# Input - absolute
 			dataLine += str(dataset[2][i]) + ','	# RPM - absolute
-			dataLine += str(self(voltToVolt(self.voltageValue(dataset[3][i])))) + ','	# Voltage - convert
-			dataLine += str(self(voltToCurr(self.voltageValue(dataset[3][i])))) + ','	# Current - convert
-			dataLine += str(self(voltToThrust(self.voltageValue(dataset[3][i])))) + ','	# Thrust - convert
-			dataLine += str(self(voltToTorque(self.voltageValue(dataset[3][i])))) + '\n'	# Torque - convert
-
-
+			dataLine += str(self.voltToThrust(self.voltageValue(dataset[3][i]))) + ','	# Thrust - convert
+			dataLine += str(self.voltToTorque(self.voltageValue(dataset[4][i]))) + ','	# Torque - convert
+			dataLine += str(self.voltToVolt(self.voltageValue(dataset[5][i]))) + ','	# Voltage - convert
+			dataLine += str(self.voltToCurr(self.voltageValue(dataset[6][i]))) + '\n'	# Current - convert
+			# Write compiled data to file
 			f.write(dataLine)
-			dataLine = ''
+			dataLine = '' # Clear line
 		f.close()
 		return
 
@@ -342,7 +348,7 @@ class Motor(Frame):
 	def voltToThrust(self, voltage):
 		# Slope obtained from data sheet
 		# Offset obtained empirically
-		return 0.514112 (voltage - 2.48)
+		return 0.514112 * (voltage - 2.48)
 
 	# Convert incoming voltage to torque
 	def voltToTorque(self, voltage):

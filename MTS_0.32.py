@@ -196,7 +196,7 @@ class Motor(Frame):
 		f = open('Test Results\\test_{}_{}_{}_{}{}{}.csv'.format(filetime[1], filetime[2], filetime[0], filetime[3], filetime[4], filetime[5]), 'w')
 
 		# Write the title line to the file so we know where each data set is
-		line1 = 'Time, Input, RPM, Voltage, Current, Thrust, Torque\n'
+		line1 = 'Time, Input, RPM, Thrust, Torque, Voltage, Current\n'
 		lb.insert(END, line1)
 		self.updateView()
 		f.write(line1)
@@ -319,7 +319,7 @@ class Motor(Frame):
 	def closePort(self):
 		# Properly close open serial port
 		if ser.port != None:
-			ser.flush()
+			# ser.flush()
 			ser.close()
 			lb.insert(END, 'Serial {} closed'.format(ser.name))
 		
@@ -327,7 +327,7 @@ class Motor(Frame):
 def closePort():
 	# Properly close open serial port
 	if ser.port != None:
-			ser.flush()
+			# ser.flush()
 			ser.close()
 			lb.insert(END, 'Serial {} closed'.format(ser.name))
 
