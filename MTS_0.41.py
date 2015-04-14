@@ -16,7 +16,8 @@ ser = serial.Serial(baudrate = 115200, timeout = 0.5)
 hs_byte = b'p'		# Handshake byte
 termination_byte = b'~'
 inits = 0
-end_run = False
+# global end_run
+# end_run = False
 
 
 
@@ -72,8 +73,8 @@ class Motor(Frame):
 		# Next have Buttons
 		closeButton = Button(self, text = 'Close', command = self.quit)
 		closeButton.pack(side = RIGHT, padx = 5, pady = 5)
-		testButton = Button(self, text = 'Run Test', command = self.runTest)
-		testButton.pack(side = RIGHT)
+		self.testButton = Button(self, text = 'Run Test', command = self.runTest)
+		self.testButton.pack(side = RIGHT)
 		clearButton = Button(self, text = 'Clear', command = self.clearTxt)
 		clearButton.pack(side = LEFT)
 		initButton = Button(self, text = 'Init Port', command = self.initPort)
@@ -248,12 +249,14 @@ class Motor(Frame):
 	# Read in and print data
 	def getData(self):
 
-		# testButton.config(text = 'Stop Test', command = stopRun)
+		# self.testButton.config(text = 'Stop Test', command = self.stopRun)
 		buf = [] # use as buffer
 		byte = ser.read() # Read in first byte
 		ender = 0
 		index = 0
 		loops = 0
+		# global end_run
+		# end_run = False
 
 		# Create list for data
 		dataset = []
@@ -303,13 +306,13 @@ class Motor(Frame):
 					loops += 1
 
 					# Print something every so many cycles
-					if loops % 1000 == 0:
+					if loops % 200 == 0:
 						lb.insert(END, 'Running, {} cycles have completed'.format(loops))
 						self.updateView()
 
 					# If end_run is true, end the run
-					if end_run:
-						break
+					# if end_run:
+					# 	break
 
 
 				except ValueError:
@@ -323,8 +326,8 @@ class Motor(Frame):
 			byte = ser.read()
 			
 		# Reset end_run and test button
-		end_run = False
-		# testButton.config(text = 'Run Test', command = runTest)
+		# end_run = False
+		# self.testButton.config(text = 'Run Test', command = self.runTest)
 		return dataset
 
 	# Create file from the collected data
@@ -339,7 +342,7 @@ class Motor(Frame):
 
 		# Append data to file
 		dataLine =''
-		for i in range(0, len(data[0])):
+		for i in range(0, len(dataset[0])):
 			# Append values to dataLine
 			dataLine += str(dataset[0][i]) + ','	# Time - absolute
 			dataLine += str(dataset[1][i]) + ','	# Input - absolute
