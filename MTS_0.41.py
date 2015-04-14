@@ -92,13 +92,20 @@ class Motor(Frame):
 			ser.write(testNum.encode('utf-8'))
 
 			if testNum == '1':
+				time.sleep(0.001)
 				ser.write(self.slider1.get().encode('utf-8'))
+				time.sleep(0.001)
 				ser.write(self.slider2.get().encode('utf-8'))
+				time.sleep(0.001)
 				ser.write(self.slider3.get().encode('utf-8'))
+				time.sleep(0.001)
 				ser.write(self.slider4.get().encode('utf-8'))
 			elif testNum == '2':
+				time.sleep(0.001)
 				ser.write(self.slider1.get().encode('utf-8'))
+				time.sleep(0.001)
 				ser.write(self.slider2.get().encode('utf-8'))
+				time.sleep(0.001)
 				ser.write(self.slider3.get().encode('utf-8'))
 
 			# Timer
