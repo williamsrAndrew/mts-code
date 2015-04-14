@@ -264,7 +264,7 @@ class Motor(Frame):
 		# Flush buffer of handshake bytes
 		while byte == hs_byte:
 			byte = ser.read()
-			total_bytes += 1 # Debug
+			# total_bytes += 1 # Debug
 
 		while True:
 			# Check if byte is an ender byte
