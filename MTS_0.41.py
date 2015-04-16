@@ -6,7 +6,7 @@
 import serial
 import time
 import tkinter
-from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, END, LEFT, TOP, BOTTOM, X, StringVar, OptionMenu, Scale, HORIZONTAL, Label, PhotoImage
+from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, END, LEFT, TOP, BOTTOM, X, StringVar, OptionMenu, Scale, HORIZONTAL, Label, PhotoImage, IntVar
 from tkinter.ttk import Frame, Button, Style
 # import numpy as np
 # import threading
@@ -27,6 +27,7 @@ class Motor(Frame):
 		Frame.__init__(self, parent)
 		self.pickedOption = StringVar(parent)
 		self.parent = parent
+		self.bitOut = IntVar()
 		self.initUI()
 
 	def initUI(self):
@@ -57,6 +58,8 @@ class Motor(Frame):
 		self.slider3.pack(side = LEFT, padx = 3, pady = 5)
 		self.slider4 = Scale(top_frame, from_=1, to_=95, orient = HORIZONTAL, label = "Max Power %")
 		self.slider4.pack(side = LEFT, padx = 3, pady = 5)
+		self.bitCheck = tkinter.Checkbutton(top_frame, text = 'Check to\noutput bits', variable = self.bitOut, justify = LEFT)
+		self.bitCheck.pack(side = LEFT, padx = 3, pady = 5)
 		# TU = PhotoImage(file = "tulogo.gif")
 		# TUimage = Label(top_frame, image = TU)
 		# TUimage.pack(side = RIGHT, padx = 3)
@@ -342,17 +345,30 @@ class Motor(Frame):
 
 		# Append data to file
 		dataLine =''
-		for i in range(0, len(dataset[0])):
-			# Append values to dataLine
-			dataLine += str(dataset[0][i]) + ','	# Time - absolute
-			dataLine += str(dataset[1][i]) + ','	# Input - absolute
-			dataLine += str(dataset[2][i]) + ','	# RPM - absolute
-			dataLine += str(self.bitToVolt(dataset[3][i])) + ','	# Voltage - convert
-			dataLine += str(self.bitToCurr(dataset[4][i])) + ','	# Current - convert
-			dataLine += str(self.bitToThrust(dataset[5][i])) + ','	# Thrust - convert
-			dataLine += str(self.bitToTorque(dataset[6][i])) + '\n'	# Torque - convert
-			f.write(dataLine)
-			dataLine = ''
+		if self.bitOut.get() == 0:
+			for i in range(0, len(dataset[0])):
+				# Append values to dataLine
+				dataLine += str(dataset[0][i]) + ','	# Time - absolute
+				dataLine += str(dataset[1][i]) + ','	# Input - absolute
+				dataLine += str(dataset[2][i]) + ','	# RPM - absolute
+				dataLine += str(self.bitToVolt(dataset[3][i])) + ','	# Voltage - convert
+				dataLine += str(self.bitToCurr(dataset[4][i])) + ','	# Current - convert
+				dataLine += str(self.bitToThrust(dataset[5][i])) + ','	# Thrust - convert
+				dataLine += str(self.bitToTorque(dataset[6][i])) + '\n'	# Torque - convert
+				f.write(dataLine)
+				dataLine = ''
+		else:
+			for i in range(0, len(dataset[0])):
+				# Append values to dataLine
+				dataLine += str(dataset[0][i]) + ','	# Time - absolute
+				dataLine += str(dataset[1][i]) + ','	# Input - absolute
+				dataLine += str(dataset[2][i]) + ','	# RPM - absolute
+				dataLine += str((dataset[3][i])) + ','	# Voltage - convert
+				dataLine += str((dataset[4][i])) + ','	# Current - convert
+				dataLine += str((dataset[5][i])) + ','	# Thrust - convert
+				dataLine += str((dataset[6][i])) + '\n'	# Torque - convert
+				f.write(dataLine)
+				dataLine = ''
 
 		f.close()
 		return
