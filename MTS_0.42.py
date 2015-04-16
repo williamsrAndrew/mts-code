@@ -94,20 +94,20 @@ class Motor(Frame):
 
 			if testNum == '1':
 				time.sleep(0.001)
-				ser.write(b'{}'.format(self.slider1.get()))
+				ser.write(chr(self.slider1.get()).encode('utf-8'))
 				time.sleep(0.001)
-				ser.write(b'{}'.format(self.slider2.get()))
+				ser.write(chr(self.slider2.get()).encode('utf-8'))
 				time.sleep(0.001)
-				ser.write(b'{}'.format(self.slider3.get()))
+				ser.write(chr(self.slider3.get()).encode('utf-8'))
 				time.sleep(0.001)
-				ser.write(b'{}'.format(self.slider4.get()))
+				ser.write(chr(self.slider4.get()).encode('utf-8'))
 			elif testNum == '2':
 				time.sleep(0.001)
-				ser.write(b'{}'.format(self.slider1.get()))
+				ser.write(chr(self.slider1.get()).encode('utf-8'))
 				time.sleep(0.001)
-				ser.write(b'{}'.format(self.slider2.get()))
+				ser.write(chr(self.slider2.get()).encode('utf-8'))
 				time.sleep(0.001)
-				ser.write(b'{}'.format(self.slider3.get()))
+				ser.write(chr(self.slider3.get()).encode('utf-8'))
 
 			# Timer
 			curTime = time.time()
