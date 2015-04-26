@@ -6,6 +6,7 @@
 import serial
 from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, NONE, END, LEFT, TOP, BOTTOM, X, Y, StringVar, OptionMenu, Scale, HORIZONTAL, Label, PhotoImage, IntVar
 from tkinter.ttk import Frame, Button, Style, Checkbutton
+import MTS
 
 ####### Init variables #######
 ser = serial.Serial(baudrate = 115200, timeout = 0.5)
@@ -407,7 +408,7 @@ class Motor(Frame):
 			byte = ser.read()
 		
 		dataQueue = mp.Queue()
-		drawProcess = mp.Process(target = drawGraph, args = (dataQueue, 
+		drawProcess = mp.Process(target = MTS.drawGraph, args = (dataQueue, 
 																self.voltBool.get(),
 																self.currBool.get(),
 																self.thrustBool.get(),
