@@ -3,7 +3,8 @@
 ## Revised 4/23/2015
 
 ######### Imports #############
-import serial
+import serial, time
+import multiprocessing as mp
 from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, NONE, END, LEFT, TOP, BOTTOM, X, Y, StringVar, OptionMenu, Scale, HORIZONTAL, Label, PhotoImage, IntVar
 from tkinter.ttk import Frame, Button, Style, Checkbutton
 import MTS
@@ -60,7 +61,7 @@ class Motor(Frame):
 		self.slider4 = Scale(top_frame, from_=1, to_=95, orient = HORIZONTAL, label = "Max Power %")
 		self.slider4.pack(side = LEFT, padx = 3, pady = 5)
 		self.graphQ = Checkbutton(top_frame, text='Check to\ndraw graph', variable = self.graphBool, command = self.addGraph)
-		self.graphQ.pack(side = LEFT, padx = 3, pady = 5)
+		self.graphQ.pack(side = RIGHT, padx = 3, pady = 5)
 
 		# Add a frame on the right
 		self.right_frame = Frame(self)
@@ -105,20 +106,20 @@ class Motor(Frame):
 			ser.write(testNum.encode('utf-8'))
 
 			if testNum == '1':
-				time.sleep(0.001)
+				# time.sleep(0.001)
 				ser.write(chr(self.slider1.get()).encode('utf-8'))
-				time.sleep(0.001)
+				# time.sleep(0.001)
 				ser.write(chr(self.slider2.get()).encode('utf-8'))
-				time.sleep(0.001)
+				# time.sleep(0.001)
 				ser.write(chr(self.slider3.get()).encode('utf-8'))
-				time.sleep(0.001)
+				# time.sleep(0.001)
 				ser.write(chr(self.slider4.get()).encode('utf-8'))
 			elif testNum == '2':
-				time.sleep(0.001)
+				# time.sleep(0.001)
 				ser.write(chr(self.slider1.get()).encode('utf-8'))
-				time.sleep(0.001)
+				# time.sleep(0.001)
 				ser.write(chr(self.slider2.get()).encode('utf-8'))
-				time.sleep(0.001)
+				# time.sleep(0.001)
 				ser.write(chr(self.slider3.get()).encode('utf-8'))
 
 			# Timer
@@ -192,7 +193,7 @@ class Motor(Frame):
 	def pickChange(self, *args):
 		option = self.pickedOption.get()
 		if option == '1':
-			self.graphQ.pack_forget()
+			# self.graphQ.pack_forget()
 			self.slider1.config(from_=0, to_=60, orient = HORIZONTAL, label = "Startup Time")
 			self.slider1.pack(side = LEFT, padx = 3, pady = 5)
 			self.slider2.config(from_=0, to_=60, orient = HORIZONTAL, label = "Hold Time")
@@ -201,10 +202,10 @@ class Motor(Frame):
 			self.slider3.pack(side = LEFT, padx = 3, pady = 5)
 			self.slider4.config(from_=1, to_=95, orient = HORIZONTAL, label = "Max Power %")
 			self.slider4.pack(side = LEFT, padx = 3, pady = 5)
-			self.graphQ.pack(side = LEFT, padx = 3, pady = 5)
+			# self.graphQ.pack(side = RIGHT, padx = 3, pady = 5)
 			return
 		elif option == '2':
-			self.graphQ.pack_forget()
+			# self.graphQ.pack_forget()
 			self.slider1.config(from_=0, to_=60, orient = HORIZONTAL, label = "Period")
 			self.slider1.pack(side = LEFT, padx = 3, pady = 5)
 			self.slider2.config(from_=1, to_=95, orient = HORIZONTAL, label = "Max Power %")
@@ -212,7 +213,7 @@ class Motor(Frame):
 			self.slider3.config(from_=0, to_=60, orient = HORIZONTAL, label = "Run Time")
 			self.slider3.pack(side = LEFT, padx = 3, pady = 5)
 			self.slider4.pack_forget()
-			self.graphQ.pack(side = LEFT, padx = 3, pady = 5)
+			# self.graphQ.pack(side = RIGHT, padx = 3, pady = 5)
 			return
 		elif option == '3':
 			self.slider1.pack_forget()
@@ -408,11 +409,14 @@ class Motor(Frame):
 			byte = ser.read()
 		
 		dataQueue = mp.Queue()
+		# Used as a buffer array to send data on Queue
+		datasender = []
 		drawProcess = mp.Process(target = MTS.drawGraph, args = (dataQueue, 
 																self.voltBool.get(),
 																self.currBool.get(),
 																self.thrustBool.get(),
 																self.torqueBool.get(), ))
+		drawProcess.start()
 
 		while True:
 			# Check if byte is an ender byte
@@ -430,6 +434,7 @@ class Motor(Frame):
 					# Convert bytes to usable int
 					data = int.from_bytes(b''.join(buf), byteorder = 'big')
 					dataset[datasetNum].append(data)
+					datasender.append(data)
 
 					buf = [] # Clear buffer
 					index += 1
@@ -444,11 +449,13 @@ class Motor(Frame):
 					# Convert bytes to usable int
 					data = int.from_bytes(b''.join(buf), byteorder = 'big')
 					dataset[datasetNum].append(data)
+					datasender.append(data)
 
 					# Add the new data to the queue
-					dataQueue.put(dataset[datasetNum])
+					dataQueue.put(datasender)
 
 					buf = [] # Clear buffer
+					datasender = [] # clear data sender buffer
 
 					# Reset variables
 					index = 0
@@ -470,6 +477,9 @@ class Motor(Frame):
 			# Read next byte
 			byte = ser.read()
 		
+		# Properly end the graphing process
+		drawProcess.join()
+
 		return dataset
 
 

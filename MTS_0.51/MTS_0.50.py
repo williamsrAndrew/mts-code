@@ -3,23 +3,18 @@
 ## Revised 3/28/2015
 
 ####### Import ########
-import serial
-import time
-import tkinter
-from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, END, LEFT, TOP, BOTTOM, X, StringVar, OptionMenu, Scale, HORIZONTAL, Label, PhotoImage
-from tkinter.ttk import Frame, Button, Style
-# import numpy as np
-# import threading
+import serial, time, tkinter
+import multiprocessing as mp
+from tkinter import Tk, BOTH, RIGHT, RAISED, Listbox, NONE, END, LEFT, TOP, BOTTOM, X, Y, StringVar, OptionMenu, Scale, HORIZONTAL, Label, PhotoImage, IntVar
+from tkinter.ttk import Frame, Button, Style, Checkbutton
+import numpy as np
+import matplotlib.pyplot as plt
 
 ####### Init variables #######
 ser = serial.Serial(baudrate = 115200, timeout = 0.5)
 hs_byte = b'p'		# Handshake byte
 termination_byte = b'~'
 inits = 0
-# global end_run
-# end_run = False
-
-
 
 class Motor(Frame):
 
@@ -27,6 +22,15 @@ class Motor(Frame):
 		Frame.__init__(self, parent)
 		self.pickedOption = StringVar(parent)
 		self.parent = parent
+
+		# Graphing booleans
+		self.graphBool = IntVar()
+		self.voltBool = IntVar()
+		self.currBool = IntVar()
+		self.thrustBool = IntVar()
+		self.torqueBool = IntVar()
+
+		# Initialize UI
 		self.initUI()
 
 	def initUI(self):
@@ -57,10 +61,18 @@ class Motor(Frame):
 		self.slider3.pack(side = LEFT, padx = 3, pady = 5)
 		self.slider4 = Scale(top_frame, from_=1, to_=95, orient = HORIZONTAL, label = "Max Power %")
 		self.slider4.pack(side = LEFT, padx = 3, pady = 5)
-		# TU = PhotoImage(file = "tulogo.gif")
-		# TUimage = Label(top_frame, image = TU)
-		# TUimage.pack(side = RIGHT, padx = 3)
-		
+		self.graphQ = Checkbutton(top_frame, text='Check to\ndraw graph', variable = self.graphBool, command = self.addGraph)
+		self.graphQ.pack(side = LEFT, padx = 3, pady = 5)
+
+		# Add a frame on the right
+		self.right_frame = Frame(self)
+		self.right_frame.pack(fill = Y, expand = 0, side = RIGHT)
+
+		# Initialize graph checks
+		self.voltCheck = Checkbutton(self.right_frame, text='Graph voltage', variable = self.voltBool)
+		self.currCheck = Checkbutton(self.right_frame, text='Graph current', variable = self.currBool)
+		self.thrustCheck = Checkbutton(self.right_frame, text='Graph thrust', variable = self.thrustBool)
+		self.torqueCheck = Checkbutton(self.right_frame, text='Graph torque', variable = self.torqueBool)
 
 
 		# Next down is a Listbox that other functions can access
@@ -71,14 +83,16 @@ class Motor(Frame):
 		self.pack(fill = BOTH, expand = 1)
 
 		# Next have Buttons
-		closeButton = Button(self, text = 'Close', command = self.quit)
-		closeButton.pack(side = RIGHT, padx = 5, pady = 5)
+		self.clearButton = Button(self, text = 'Clear', command = self.clearTxt)
+		self.clearButton.pack(side = LEFT)
+		self.initButton = Button(self, text = 'Init Port', command = self.initPort)
+		self.initButton.pack(side = LEFT)
+
+		self.closeButton = Button(self, text = 'Close', command = self.quit)
+		self.closeButton.pack(side = RIGHT, padx = 5, pady = 5)
 		self.testButton = Button(self, text = 'Run Test', command = self.runTest)
 		self.testButton.pack(side = RIGHT)
-		clearButton = Button(self, text = 'Clear', command = self.clearTxt)
-		clearButton.pack(side = LEFT)
-		initButton = Button(self, text = 'Init Port', command = self.initPort)
-		initButton.pack(side = LEFT)
+		
 
 	def runTest(self):
 
@@ -111,7 +125,12 @@ class Motor(Frame):
 
 			# Timer
 			curTime = time.time()
-			dataset = self.getData()
+
+			# Choose which data collection function to run
+			if self.graphBool.get():
+				dataset = self.getDataDrawGraph()
+			else:
+				dataset = self.getData()
 			self.updateView()
 
 			# Create the file
@@ -122,6 +141,54 @@ class Motor(Frame):
 		except serial.serialutil.SerialException:
 			lb.insert(END, 'Could not run test 4')
 			self.updateView()
+
+	# Add options for graph
+	def addGraph(self):
+		if self.graphBool.get():
+			# Auto check boxes
+			self.voltBool.set(1)
+			self.currBool.set(1)
+			self.thrustBool.set(1)
+			self.torqueBool.set(1)
+
+			lb.pack_forget()
+			self.pack_forget()
+			self.clearButton.pack_forget()
+			self.initButton.pack_forget()
+			self.closeButton.pack_forget()
+			self.testButton.pack_forget()
+
+			self.right_frame.pack(fill = Y, expand = 0, side = RIGHT)
+			lb.pack(fill = BOTH, expand = 1, side = TOP)
+			self.pack(fill = BOTH, expand = 1)
+			self.clearButton.pack(side = LEFT)
+			self.initButton.pack(side = LEFT)
+			self.closeButton.pack(side = RIGHT)
+			self.testButton.pack(side = RIGHT)
+
+
+			self.voltCheck.pack(side = TOP, padx = 3, pady = 5)
+			self.currCheck.pack(side = TOP, padx = 3, pady = 5)
+			self.thrustCheck.pack(side = TOP, padx = 3, pady = 5)
+			self.torqueCheck.pack(side = TOP, padx = 3, pady = 5)
+			lb.pack(fill = BOTH, expand = 1, side = TOP)
+			self.pack(fill = BOTH, expand = 1)
+			
+		else:
+			# Make sure boxes are unchecked
+			self.voltBool.set(0)
+			self.currBool.set(0)
+			self.thrustBool.set(0)
+			self.torqueBool.set(0)
+			# Remove check box displays
+			self.voltCheck.pack_forget()
+			self.currCheck.pack_forget()
+			self.thrustCheck.pack_forget()
+			self.torqueCheck.pack_forget()
+			self.right_frame.pack_forget()
+
+			lb.pack(fill = BOTH, expand = 1, side = TOP)
+			self.pack(fill = BOTH, expand = 1)
 
 	# Run when the optionsMenu changes
 	def pickChange(self, *args):
@@ -248,7 +315,6 @@ class Motor(Frame):
 
 	# Read in and print data
 	def getData(self):
-
 		# self.testButton.config(text = 'Stop Test', command = self.stopRun)
 		buf = [] # use as buffer
 		byte = ser.read() # Read in first byte
@@ -268,6 +334,8 @@ class Motor(Frame):
 		while byte == hs_byte:
 			byte = ser.read()
 			# total_bytes += 1 # Debug
+
+
 
 		while True:
 			# Check if byte is an ender byte
@@ -329,6 +397,88 @@ class Motor(Frame):
 		# end_run = False
 		# self.testButton.config(text = 'Run Test', command = self.runTest)
 		return dataset
+
+	def getDataDrawGraph(self):
+		buf = [] # use as buffer
+		byte = ser.read() # Read in first byte
+		ender = 0
+		index = 0
+		loops = 0
+
+		# Create list for data
+		dataset = []
+		for i in range(0,7):
+			dataset.append([])
+		datasetNum = 0
+
+		# Flush buffer of handshake bytes
+		while byte == hs_byte:
+			byte = ser.read()
+		
+		dataQueue = mp.Queue()
+		drawProcess = mp.Process(target = drawGraph, args = (dataQueue, 
+																self.voltBool.get()
+																self.currBool.get()
+																self.thrustBool.get()
+																self.torqueBool.get(), ))
+
+		while True:
+			# Check if byte is an ender byte
+			if byte == termination_byte:
+				ender += 1
+				if ender == 4:
+					break
+			else: ender = 0
+
+			# Add bytes to buffer
+			if index  == 3 or index == 4 or index == 8 or index == 10 or index == 12 or index == 14 :
+				buf.append(byte)
+				try:
+					# Convert bytes to usable int
+					data = int.from_bytes(b''.join(buf), byteorder = 'big')
+					dataset[datasetNum].append(data)
+
+					buf = [] # Clear buffer
+					index += 1
+					datasetNum += 1
+
+				except ValueError:
+					print(byte)
+
+			elif index == 16:
+				buf.append(byte)
+				try:
+					# Convert bytes to usable int
+					data = int.from_bytes(b''.join(buf), byteorder = 'big')
+					dataset[datasetNum].append(data)
+
+					# Add the new data to the queue
+					dataQueue.put(dataset[datasetNum])
+
+					buf = [] # Clear buffer
+
+					# Reset variables
+					index = 0
+					datasetNum = 0
+					loops += 1
+
+					# Print something every so many cycles
+					if loops % 200 == 0:
+						lb.insert(END, 'Running, {} cycles have completed'.format(loops))
+						self.updateView()
+
+				except ValueError:
+					print(byte)
+
+			else:
+				buf.append(byte)
+				index += 1
+
+			# Read next byte
+			byte = ser.read()
+		
+		return dataset
+
 
 	# Create file from the collected data
 	def makeFile(self, dataset):
@@ -402,15 +552,77 @@ class Motor(Frame):
 	def closePort(self):
 		# Properly close open serial port
 		if ser.port != None:
-			# ser.flush()
+			ser.flush()
 			ser.close()
 			lb.insert(END, 'Serial {} closed'.format(ser.name))
 		
 
+# Draw graphzzzzz
+def drawGraph(dataQ, voltBool, currBool, thrustBool, torqueBool):
+	# Spaces from beginning of data list
+	offset = 3
+
+	# Number of graphs to draw
+	graphNum = voltBool + currBool + thrustBool + torqueBool
+
+	# Add things for the first subplot
+	index = 1
+	if voltBool:
+		plt.subplot(graphNum, 1, index)
+		plt.ylabel('Voltage')
+		plt.ion()
+		index += 1
+	if currBool:
+		plt.subplot(graphNum, 1, index)
+		plt.ylabel('Current')
+		plt.ion()
+		index += 1
+	if thrustBool:
+		plt.subplot(graphNum, 1, index)
+		plt.ylabel('Thrust')
+		plt.ion()
+		index += 1
+	if torqueBool:
+		plt.subplot(graphNum, 1, index)
+		plt.ylabel('Torque')
+		plt.ion()
+		index += 1
+
+	plt.xlabel('Time (ms)')
+	plt.show()
+
+	# Create new lists for time and incoming data
+	t, data = [], []
+	for i in range(0, graphNum):
+		data.append([])
+
+	# Create buffer for incoming data and boolean to terminate while loop
+	dataSet = []
+	didGet = False
+
+	while True:
+		while not dataQ.empty():
+			dataSet = dataQ.get()
+			if dataSet == False:
+				break
+			t.append(dataSet[0])
+			data.append(dataSet[1])
+			didGet = True
+		if didGet:
+			plt.plot(t, data, 'b:')
+			plt.draw()
+			didGet = False
+		time.sleep(1)
+		if dataSet == False:
+			break
+	plt.show(block = True)
+	return
+
+
 def closePort():
 	# Properly close open serial port
 	if ser.port != None:
-			# ser.flush()
+			ser.flush()
 			ser.close()
 			lb.insert(END, 'Serial {} closed'.format(ser.name))
 

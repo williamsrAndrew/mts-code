@@ -102,7 +102,7 @@ def drawGraph(dataQ, voltBool, currBool, thrustBool, torqueBool):
 
 def main():
 	root = Tk()
-	root.geometry("700x400")
+	root.geometry("900x500")
 	app = gui.Motor(root)
 	root.mainloop()
 
